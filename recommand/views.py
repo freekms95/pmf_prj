@@ -30,9 +30,6 @@ import torch
 import json
 import re
 from nltk.tokenize import word_tokenize
-from django.core.cache import cache
-
-cache.clear()
 
 
 
@@ -47,29 +44,29 @@ def woman(request):
 
 # man 유사이미지 불러오기
 # 모델 불러오기
-model_path_clothes = r'C:\\Users\\ITSC\\Desktop\\PMF_DB\\model\\best_VGG19.keras'
+model_path_clothes = r'C:\\Users\\ITSC\\Desktop\\final_240607\\PMF_DB\\model\\best_VGG19.keras'
 model_clothes = tf.keras.models.load_model(model_path_clothes)
 
-model_path_style = r"C:\\Users\\ITSC\\Desktop\\PMF_DB\\model\\best_model_v4.keras"
+model_path_style = r"C:\\Users\\ITSC\\Desktop\\final_240607\\PMF_DB\\model\\best_model_v4.keras"
 model_style = tf.keras.models.load_model(model_path_style)
 
-model_path_style_w = r'C:\\Users\\ITSC\\Desktop\\PMF_DB\\model\\best_women_model_v2.keras'
+model_path_style_w = r'C:\\Users\\ITSC\\Desktop\\final_240607\\PMF_DB\\model\\best_women_model_v2.keras'
 model_style_w = tf.keras.models.load_model(model_path_style_w)
 
 # 남자 텍스트 모델
-m_text_model_path = r"C:\\Users\\ITSC\\Desktop\\PMF_DB\\텍스트모델\\mpnet_model"
+m_text_model_path = r"C:\\Users\\ITSC\\Desktop\\final_240607\\PMF_DB\\텍스트모델\\mpnet_model"
 m_text_model = SentenceTransformer(m_text_model_path)
 
 # 남자 임베딩
-m_embeddings = torch.load(r"C:\\Users\\ITSC\\Desktop\\PMF_DB\\텍스트모델\\embeddings\\mpnet_embeddings.pt")
+m_embeddings = torch.load(r"C:\\Users\\ITSC\\Desktop\\final_240607\\PMF_DB\\텍스트모델\\embeddings\\mpnet_embeddings.pt")
 
 
 # 여자 텍스트 모델
-w_text_model_path = r"C:\\Users\\ITSC\\Desktop\\PMF_DB\\텍스트모델\\woman_mpnet_model"
+w_text_model_path = r"C:\\Users\\ITSC\\Desktop\\final_240607\\PMF_DB\\텍스트모델\\woman_mpnet_model"
 w_text_model = SentenceTransformer(w_text_model_path)
 
 # 여자 임베딩
-w_embeddings = torch.load(r"C:\\Users\\ITSC\\Desktop\\PMF_DB\\텍스트모델\\embeddings\\woman_mpnet_embeddings.pt")
+w_embeddings = torch.load(r"C:\\Users\\ITSC\\Desktop\\final_240607\\PMF_DB\\텍스트모델\\embeddings\\woman_mpnet_embeddings.pt")
 
 class ImageSimilarityCalculator:
     def __init__(self):
@@ -81,7 +78,7 @@ class ImageSimilarityCalculator:
         self.features1 = None  # 이미지 1의 특징을 저장할 변수
     
     # 각각의 이미지 경로 가져오는 함수
-    def get_image_path(self, image_path, style, img1_path, num=100): 
+    def get_image_path(self, image_path, style, img1_path, num=150): 
         path = os.path.join(image_path, style)                        
         img_list = os.listdir(path)                          # 원본 이미지 리스트
         random_img_list = random.sample(img_list, num)       # 랜덤하게 추출한 이미지 리스트
@@ -137,7 +134,6 @@ class ImageSimilarityCalculator:
     def preprocess_image(self, img_path):
         # PIL 이미지 로드 후 크기 조정
         img = Image.open(img_path)
-        #img = img.convert("RGB")
         img = img.resize((224, 224))
         img_array = img_to_array(img)
         img_array = np.expand_dims(img_array, axis=0)
@@ -208,7 +204,7 @@ class ImageSimilarityCalculator_w:
         self.features1 = None  # 이미지 1의 특징을 저장할 변수
     
     # 각각의 이미지 경로 가져오는 함수
-    def get_image_path(self, image_path, style, img1_path, num=100): 
+    def get_image_path(self, image_path, style, img1_path, num=150): 
         path = os.path.join(image_path, style)                        
         img_list = os.listdir(path)                          # 원본 이미지 리스트
         random_img_list = random.sample(img_list, num)       # 랜덤하게 추출한 이미지 리스트
@@ -338,16 +334,19 @@ def man(request):
                 # 배경제거
                 image = remove(image)  
 
-                # 배경을 검정색으로 설정
+                # 4차원으로 변경
                 image = image.convert("RGBA")
-                background = Image.new("RGBA", image.size, (255, 255, 255))
+                # 4차원의 흰색 배경 생성
+                background = Image.new("RGBA", image.size, (0, 0, 0))
+                # 4차원으로 변경된 이미지와 흰색 배경 합성
                 image1 = Image.alpha_composite(background, image)
+                # 다시 3차원 변환
                 image1 = image1.convert("RGB")
-                image1 = image1.resize((224, 224))
-
+                # 224, 224로 높이 너비 변경 
+                image1 = image1.resize((224, 224))               
                 input_data = img_to_array(image1)
                 input_data = np.expand_dims(input_data, axis=0)
-                # input_data = preprocess_input(input_data)
+                input_data = preprocess_input(input_data)
                 input_data = input_data / 255.0
 
                 # Predict if it's clothes
@@ -357,7 +356,7 @@ def man(request):
                 predicted_style = styles[predicted_class]
 
                 if predicted_style == 'clothes':
-                    # Further classify the clothing style
+                    # 배경을 검정색으로 설정
                     background = Image.new("RGBA", image.size, (0, 0, 0))
                     image = Image.alpha_composite(background, image)
                     image = image.convert("RGB")
@@ -376,17 +375,18 @@ def man(request):
                     # Find similar images
                     img1_path = os.path.join(settings.MEDIA_ROOT, file_name)
                     image_similarity_calculator = ImageSimilarityCalculator()
-                    similar_images = image_similarity_calculator.get_image_path(r'C:\\Users\\ITSC\\Desktop\\PMF_DB\\media\\media\\image_nuggi\\men\\', predicted_class_label, img1_path)
+                    similar_images = image_similarity_calculator.get_image_path(r'C:\\Users\\ITSC\\Desktop\\final_240607\\PMF_DB\\media\\media\\image_nuggi\\men\\', predicted_class_label, img1_path)
                     
-                   
+                    random_similar_image = random.choice(similar_images) if similar_images else None
 
                     return render(request, 'man/man.html', {
                         'prediction': predicted_class_label, 
                         'image_url': file_url,
                         'img_url_list': similar_images,
+                        'random_similar_image': random_similar_image,
                     })
                 else:
-                    return render(request, 'man/man.html', {'prediction': 'wrong image', 'image_url': file_url})
+                    return render(request, 'man/man.html', {'prediction': 'WRONG IMAGE', 'image_url': file_url})
 
             except Exception as e:
                 print(f"Error: {e}")  # Log the error
@@ -412,21 +412,14 @@ def woman(request):
                  # 배경제거
                 image = remove(image)  
 
-                # 4차원으로 변경
+                # 배경을 검정색으로 설정
                 image = image.convert("RGBA")
-                # 4차원의 흰색 배경 생성
                 background = Image.new("RGBA", image.size, (255, 255, 255))
-                # 4차원으로 변경된 이미지와 흰색 배경 합성
                 image1 = Image.alpha_composite(background, image)
-                # 다시 3차원 변환
                 image1 = image1.convert("RGB")
-                # 224, 224로 높이 너비 변경 
                 image1 = image1.resize((224, 224))
 
-                input_data = img_to_array(image1)
-                
-                
-               
+                input_data = img_to_array(image1)                
                 input_data = np.expand_dims(input_data, axis=0)
                 input_data = preprocess_input(input_data)
                 input_data = input_data / 255.0
@@ -439,14 +432,12 @@ def woman(request):
 
                 if predicted_style == 'clothes':
                     # Further classify the clothing style
-
                     background = Image.new("RGBA", image.size, (0, 0, 0))
                     image = Image.alpha_composite(background, image)
                     image = image.convert("RGB")
                     image = image.resize((224, 224))
 
-                    img_array = np.asarray(image)
-                    
+                    img_array = np.asarray(image)                    
                     img_array = np.expand_dims(img_array, axis=0)
                     img_array = img_array / 255.0  # 이미지를 0과 1 사이로 정규화
 
@@ -459,7 +450,7 @@ def woman(request):
                     # Find similar images
                     img1_path = os.path.join(settings.MEDIA_ROOT, file_name)
                     image_similarity_calculator = ImageSimilarityCalculator_w()
-                    similar_images = image_similarity_calculator.get_image_path(r'C:\\Users\\ITSC\\Desktop\\PMF_DB\\media\\media\\image_nuggi\\women\\', predicted_class_label, img1_path)
+                    similar_images = image_similarity_calculator.get_image_path(r'C:\\Users\\ITSC\\Desktop\\final_240607\\PMF_DB\\media\\media\\image_nuggi\\women\\', predicted_class_label, img1_path)
                     
                     return render(request, 'woman/woman.html', {
                         'prediction': predicted_class_label, 
@@ -467,7 +458,7 @@ def woman(request):
                         'img_url_list': similar_images
                     })
                 else:
-                    return render(request, 'woman/woman.html', {'prediction': 'Wrong image', 'image_url': file_url})
+                    return render(request, 'woman/woman.html', {'prediction': 'WRONG IMAGE', 'image_url': file_url})
 
             except Exception as e:
                 print(f"Error: {e}")  # Log the error
