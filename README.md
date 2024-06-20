@@ -18,7 +18,7 @@
  
 ## 포트폴리오
 ### ☞ 딥러닝을 이용한 옷 추천 서비스
-- 사용언어 및 프레임워크 : `Python`, 'SQL', 'JavaScript', 'Django', 'HTML', 'CSS'  
+- 사용언어 및 프레임워크 : `Python`, `SQL`, `JavaScript`, `Django`, `HTML`, `CSS`  
 - 개발도구 : `Jupyter Notebook`, `Visual Studio Code`, `DBeaver`
 - 사용 라이브러리 : `pandas`, `numpy`, `tensorflow`, `torch`, `keras`, `scipy`, `konlpy`, `nltk`, `sentence_transformers`, `json`, `os`
 - 인원 : 4명
